@@ -3,10 +3,15 @@ name: cicd
 on:
   push:
   pull_request:
+    types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   pipeline:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -56,3 +61,42 @@ jobs:
           esac
 
           curl --fail --request POST "${RENDER_DEPLOY_HOOK_URL}${separator}ref=${GITHUB_SHA}"
+
+  tag_release:
+    name: Bump version and tag release
+    needs: pipeline
+    permissions:
+      contents: write
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.base.ref == 'master'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: fs-pokedex-main
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Set up Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump patch version
+        run: npm version patch --no-git-tag-version
+
+      - name: Commit version bump and create tag
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+
+          git add package.json package-lock.json
+          git commit -m "Bump version to v${VERSION}"
+          git tag "v${VERSION}"
+          git push origin HEAD:master
+          git push origin "v${VERSION}"
