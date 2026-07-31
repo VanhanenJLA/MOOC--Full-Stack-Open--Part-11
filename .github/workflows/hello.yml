@@ -8,5 +8,7 @@ jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - name: Echo hello
-        run: echo "hello"
+      - name: Print datetime and directory contents
+        run: |
+          date
+          ls -l
