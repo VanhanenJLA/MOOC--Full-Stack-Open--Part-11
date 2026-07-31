@@ -1,4 +1,4 @@
-name: ESLint
+name: cicd
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  eslint:
+  pipeline:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -27,3 +27,9 @@ jobs:
 
       - name: Run ESLint
         run: npm run eslint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
