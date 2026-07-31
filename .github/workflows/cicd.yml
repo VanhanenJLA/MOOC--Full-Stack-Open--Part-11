@@ -3,7 +3,7 @@ name: cicd
 on:
   push:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 permissions:
@@ -68,10 +68,9 @@ jobs:
     permissions:
       contents: write
     if: >
-      github.event_name == 'pull_request' &&
-      github.event.action == 'closed' &&
-      github.event.pull_request.merged == true &&
-      github.event.pull_request.base.ref == 'master'
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      !startsWith(github.event.head_commit.message, 'Bump version to v')
     runs-on: ubuntu-latest
     defaults:
       run:
