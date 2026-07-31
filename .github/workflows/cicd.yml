@@ -25,6 +25,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
       - name: Run ESLint
         run: npm run eslint
 
@@ -33,3 +36,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Run Playwright tests
+        run: npm run test:e2e

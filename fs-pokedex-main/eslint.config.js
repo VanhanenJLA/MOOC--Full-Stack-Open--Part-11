@@ -7,6 +7,7 @@ module.exports = [
   {
     ignores: [
       'webpack.config.js',
+      'playwright.config.js',
       'eslint.config.js',
       '.eslintrc.js',
       'node_modules/**',
@@ -43,6 +44,27 @@ module.exports = [
       globals: {
         ...globals.node
       }
+    }
+  },
+  {
+    files: ['e2e/**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2018,
+      sourceType: 'commonjs',
+      globals: {
+        ...globals.node
+      }
+    },
+    rules: {
+      'indent': ['error', 2],
+      'linebreak-style': ['error', 'unix'],
+      'quotes': ['error', 'single'],
+      'semi': ['error', 'never'],
+      'eqeqeq': 'error',
+      'no-trailing-spaces': 'error',
+      'object-curly-spacing': ['error', 'always'],
+      'arrow-spacing': ['error', { 'before': true, 'after': true }],
+      'no-console': 'error'
     }
   },
   {
