@@ -72,7 +72,6 @@ jobs:
     if: >
       github.event_name == 'push' &&
       github.ref == 'refs/heads/master' &&
-      !startsWith(github.event.head_commit.message, 'Bump version to v') &&
       !contains(github.event.head_commit.message, '[skip deploy]') &&
       !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
@@ -94,51 +93,40 @@ jobs:
           curl --fail --request POST "${RENDER_DEPLOY_HOOK_URL}${separator}ref=${GITHUB_SHA}"
 
   tag_release:
-    name: Bump version and tag release
+    name: Tag release
     needs: deploy
     permissions:
       contents: write
     if: >
       github.event_name == 'push' &&
       github.ref == 'refs/heads/master' &&
-      !startsWith(github.event.head_commit.message, 'Bump version to v') &&
       !contains(github.event.head_commit.message, '[skip tag]') &&
       !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: fs-pokedex-main
     steps:
-      - name: Checkout master
+      - name: Checkout deployed commit
         uses: actions/checkout@v4
         with:
-          ref: master
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: fs-pokedex-main/package-lock.json
-
-      - name: Set up Git
+      - name: Create and push next patch tag
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          LATEST_TAG=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)
 
-      - name: Bump patch version
-        run: npm version patch --no-git-tag-version
+          if [ -z "$LATEST_TAG" ]; then
+            NEXT_TAG="v1.0.0"
+          else
+            VERSION=${LATEST_TAG#v}
+            MAJOR=${VERSION%%.*}
+            REST=${VERSION#*.}
+            MINOR=${REST%%.*}
+            PATCH=${REST##*.}
+            NEXT_TAG="v${MAJOR}.${MINOR}.$((PATCH + 1))"
+          fi
 
-      - name: Commit version bump and create tag
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-
-          git add package.json package-lock.json
-          git commit -m "Bump version to v${VERSION}"
-          git tag "v${VERSION}"
-          git push origin HEAD:master
-          git push origin "v${VERSION}"
+          git tag "$NEXT_TAG" "$GITHUB_SHA"
+          git push origin "$NEXT_TAG"
 
   notify:
     name: Notify
