@@ -136,15 +136,24 @@ jobs:
     steps:
       - name: Notify successful deployment
         if: needs.deploy.result == 'success' && needs.tag_release.result == 'success'
-        uses: rjstone/discord-webhook-notify@v2.3.0
-        with:
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          username: Pokedex CI/CD
-          severity: info
-          title: New version deployed
-          details: |
-            Commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          jq -n \
+            --arg commit_url "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              username: "Pokedex CI/CD",
+              embeds: [{
+                title: "New version deployed",
+                description: ("Commit: " + $commit_url + "\nWorkflow run: " + $run_url),
+                color: 5763719
+              }]
+            }' |
+            curl --fail-with-body --silent --show-error \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              "$DISCORD_WEBHOOK_URL"
 
       - name: Notify failed pipeline
         if: >
@@ -152,15 +161,30 @@ jobs:
           needs.test.result == 'failure' ||
           needs.deploy.result == 'failure' ||
           needs.tag_release.result == 'failure'
-        uses: rjstone/discord-webhook-notify@v2.3.0
-        with:
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          username: Pokedex CI/CD
-          severity: error
-          title: Pipeline failed
-          details: |
-            Repository: ${{ github.repository }}
-            Commit: ${{ github.sha }}
-            Author: ${{ github.actor }}
-            Commit details: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
-            Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: |
+          jq -n \
+            --arg repository "${{ github.repository }}" \
+            --arg commit "${{ github.sha }}" \
+            --arg author "${{ github.actor }}" \
+            --arg commit_url "${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}" \
+            --arg run_url "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{
+              username: "Pokedex CI/CD",
+              embeds: [{
+                title: "Pipeline failed",
+                description: (
+                  "Repository: " + $repository +
+                  "\nCommit: " + $commit +
+                  "\nAuthor: " + $author +
+                  "\nCommit details: " + $commit_url +
+                  "\nWorkflow run: " + $run_url
+                ),
+                color: 15548997
+              }]
+            }' |
+            curl --fail-with-body --silent --show-error \
+              --header 'Content-Type: application/json' \
+              --data-binary @- \
+              "$DISCORD_WEBHOOK_URL"
